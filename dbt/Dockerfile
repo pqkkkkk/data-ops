@@ -46,5 +46,5 @@ RUN pip install --no-cache-dir \
 # Copy dbt project files
 COPY . .
 
-# Initialize dbt project (with no packages)
-RUN touch packages.yml && dbt deps 
+# Install dbt packages after copying project files
+RUN dbt deps 
