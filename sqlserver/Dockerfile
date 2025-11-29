@@ -18,8 +18,12 @@ RUN curl -L -o /tmp/AdventureWorks2014.bak https://github.com/Microsoft/sql-serv
 COPY restore_db.sh /tmp/restore_db.sh
 RUN chmod +x /tmp/restore_db.sh
 
+# Create entrypoint script
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 # Switch back to mssql user
 USER mssql
 
-# Start SQL Server and keep it running
-CMD /opt/mssql/bin/sqlservr 
+# Use custom entrypoint
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"] 
