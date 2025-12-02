@@ -19,11 +19,14 @@ clean-targets:
 models:
   dbt_sqlserver_project:
     bronze:
+      +tags: ['bronze']
       +materialized: view
       +schema: bronze
     silver:
+      +tags: ['silver']
       +materialized: table
       +schema: silver
     gold:
+      +tags: ['gold']
       +materialized: table 
       +schema: gold
