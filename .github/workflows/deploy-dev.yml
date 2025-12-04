@@ -1,0 +1,75 @@
+name: Deploy to Development
+
+on:
+  push:
+    branches:
+      - develop
+      - etl
+    paths:
+      - 'dbt/**'
+      - 'airflow/**'
+
+jobs:
+  deploy-dev:
+    runs-on: ubuntu-latest
+    environment:
+      name: development
+      url: https://github.com/${{ github.repository }}
+    
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2019-latest
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: YourStrong@Passw0rd
+        ports:
+          - 1433:1433
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Install DBT
+        run: |
+          pip install dbt-sqlserver
+      
+      - name: Install DBT dependencies
+        run: |
+          cd dbt
+          dbt deps
+      
+      - name: Run DBT models (Development)
+        run: |
+          cd dbt
+          dbt run --profiles-dir . --target dev
+      
+      - name: Run DBT tests (Development)
+        run: |
+          cd dbt
+          dbt test --profiles-dir . --target dev
+      
+      - name: Generate DBT documentation
+        run: |
+          cd dbt
+          dbt docs generate --profiles-dir . --target dev
+      
+      - name: Deployment Success Notification
+        if: success()
+        run: |
+          echo "✅ Deployment to Development successful!"
+          echo "📊 Branch: ${{ github.ref_name }}"
+          echo "👤 Deployed by: ${{ github.actor }}"
+          echo "📝 Commit: ${{ github.sha }}"
+      
+      - name: Deployment Failure Notification
+        if: failure()
+        run: |
+          echo "❌ Deployment to Development failed!"
+          echo "📊 Branch: ${{ github.ref_name }}"
+          echo "👤 Attempted by: ${{ github.actor }}"
+          echo "📝 Commit: ${{ github.sha }}"

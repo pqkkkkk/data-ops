@@ -1,0 +1,121 @@
+name: CI - Test DBT Models
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+      - etl
+    paths:
+      - 'dbt/**'
+      - '.github/workflows/**'
+
+jobs:
+  dbt-test:
+    runs-on: ubuntu-latest
+    
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2019-latest
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: YourStrong@Passw0rd
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Install DBT and dependencies
+        run: |
+          pip install dbt-sqlserver
+          cd dbt
+          dbt deps
+      
+      - name: DBT Debug
+        run: |
+          cd dbt
+          dbt debug --profiles-dir .
+      
+      - name: Compile DBT models
+        run: |
+          cd dbt
+          dbt compile --profiles-dir .
+      
+      - name: Run DBT models
+        run: |
+          cd dbt
+          dbt run --profiles-dir . --target dev
+      
+      - name: Test DBT models
+        run: |
+          cd dbt
+          dbt test --profiles-dir . --target dev
+      
+      - name: Generate DBT docs
+        run: |
+          cd dbt
+          dbt docs generate --profiles-dir .
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: dbt-test-results
+          path: dbt/target/*.json
+
+  lint-python:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Install linting tools
+        run: |
+          pip install flake8 black
+      
+      - name: Run flake8
+        run: |
+          flake8 airflow/dags/ --max-line-length=120 --exclude=__pycache__
+      
+      - name: Check code formatting with black
+        run: |
+          black --check airflow/dags/
+
+  lint-sql:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Install sqlfluff
+        run: |
+          pip install sqlfluff sqlfluff-templater-dbt
+      
+      - name: Lint SQL files
+        run: |
+          cd dbt
+          sqlfluff lint models/ --dialect tsql
