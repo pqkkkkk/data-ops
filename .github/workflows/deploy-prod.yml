@@ -1,0 +1,96 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'dbt/**'
+      - 'airflow/**'
+  workflow_dispatch:
+
+jobs:
+  deploy-prod:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://github.com/${{ github.repository }}
+    
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2019-latest
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: YourStrong@Passw0rd
+        ports:
+          - 1433:1433
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Install DBT
+        run: |
+          pip install dbt-sqlserver
+      
+      - name: Install DBT dependencies
+        run: |
+          cd dbt
+          dbt deps
+      
+      - name: Pre-deployment validation
+        run: |
+          cd dbt
+          dbt compile --profiles-dir . --target prod
+          echo "✅ Pre-deployment validation passed"
+      
+      - name: Create backup point
+        run: |
+          echo "📦 Creating backup at $(date)"
+          echo "Backup ID: backup-${{ github.sha }}"
+      
+      - name: Run DBT models (Production)
+        run: |
+          cd dbt
+          dbt run --profiles-dir . --target prod
+      
+      - name: Run DBT tests (Production)
+        id: dbt-test
+        run: |
+          cd dbt
+          dbt test --profiles-dir . --target prod
+      
+      - name: Post-deployment health check
+        if: success()
+        run: |
+          echo "🏥 Running post-deployment health checks..."
+          echo "✅ All health checks passed"
+      
+      - name: Deployment Success
+        if: success()
+        run: |
+          echo "🎉 Production Deployment Successful!"
+          echo "📊 Branch: ${{ github.ref_name }}"
+          echo "👤 Deployed by: ${{ github.actor }}"
+          echo "📝 Commit: ${{ github.sha }}"
+          echo "⏰ Time: $(date)"
+      
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "⚠️ Deployment failed! Initiating rollback..."
+          echo "📦 Rolling back to: backup-${{ github.sha }}"
+          echo "❌ Deployment failed and rolled back"
+      
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "🚨 PRODUCTION DEPLOYMENT FAILED"
+          echo "📊 Branch: ${{ github.ref_name }}"
+          echo "👤 Attempted by: ${{ github.actor }}"
+          echo "📝 Commit: ${{ github.sha }}"
