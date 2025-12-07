@@ -1,6 +1,13 @@
 name: CI - Test DBT Models
 
 on:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'dbt/**'
+      - '.github/workflows/**'
+      - 'airflow/**'
   pull_request:
     branches:
       - main
