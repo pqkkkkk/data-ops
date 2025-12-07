@@ -1,8 +1,8 @@
 FROM mcr.microsoft.com/mssql/server:2019-latest
 
-# Install curl and mssql-tools
+# Install curl, mssql-tools and dos2unix
 USER root
-RUN apt-get update && apt-get install -y curl gnupg2
+RUN apt-get update && apt-get install -y curl gnupg2 dos2unix
 
 # Install mssql-tools
 RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
@@ -16,11 +16,11 @@ RUN curl -L -o /tmp/AdventureWorks2014.bak https://github.com/Microsoft/sql-serv
 
 # Create a script to restore the database
 COPY restore_db.sh /tmp/restore_db.sh
-RUN chmod +x /tmp/restore_db.sh
+RUN dos2unix /tmp/restore_db.sh && chmod +x /tmp/restore_db.sh
 
 # Create entrypoint script
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+RUN dos2unix /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
 
 # Switch back to mssql user
 USER mssql

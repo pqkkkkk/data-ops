@@ -6,7 +6,7 @@ models:
     columns:
       - name: customer_id
         description: Unique customer identifier
-        tests:
+        data_tests:
           - unique
           - not_null
       - name: total_revenue
@@ -19,7 +19,7 @@ models:
     columns:
       - name: product_id
         description: Unique product identifier
-        tests:
+        data_tests:
           - unique
           - not_null
       - name: total_revenue
@@ -32,7 +32,7 @@ models:
     columns:
       - name: order_date
         description: Date of orders
-        tests:
+        data_tests:
           - unique
           - not_null
       - name: total_revenue

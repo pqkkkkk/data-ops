@@ -6,7 +6,7 @@ models:
     columns:
       - name: customer_id
         description: Unique customer identifier
-        tests:
+        data_tests:
           - unique
           - not_null
       - name: full_name
@@ -19,14 +19,14 @@ models:
     columns:
       - name: product_id
         description: Unique product identifier
-        tests:
+        data_tests:
           - unique
           - not_null
       - name: product_name
         description: Product name
       - name: list_price
         description: Product list price
-        tests:
+        data_tests:
           - not_null
 
   - name: slvr_sales_orders
@@ -34,17 +34,17 @@ models:
     columns:
       - name: sales_order_id
         description: Sales order identifier
-        tests:
+        data_tests:
           - not_null
       - name: order_detail_id
         description: Order detail identifier
-        tests:
+        data_tests:
           - not_null
       - name: line_total
         description: Total amount for line item
-        tests:
+        data_tests:
           - not_null
-    tests:
+    data_tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns:
             - sales_order_id

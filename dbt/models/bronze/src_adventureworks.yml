@@ -7,10 +7,22 @@ sources:
     tables:
       - name: SalesOrderHeader
         description: Contains the sales order header information
+        freshness:
+          warn_after: {count: 365, period: day}
+          error_after: {count: 8000, period: day}
+        loaded_at_field: ModifiedDate
       - name: SalesOrderDetail
         description: Contains the sales order detail line items
+        freshness:
+          warn_after: {count: 365, period: day}
+          error_after: {count: 8000, period: day}
+        loaded_at_field: ModifiedDate
       - name: Customer
         description: Contains customer information
+        freshness:
+          warn_after: {count: 365, period: day}
+          error_after: {count: 8000, period: day}
+        loaded_at_field: ModifiedDate
 
   - name: adventureworks_production
     database: AdventureWorks2014
@@ -18,6 +30,10 @@ sources:
     tables:
       - name: Product
         description: Contains product information
+        freshness:
+          warn_after: {count: 365, period: day}
+          error_after: {count: 8000, period: day}
+        loaded_at_field: ModifiedDate
       - name: ProductSubcategory
         description: Contains product subcategory information
 
@@ -26,4 +42,8 @@ sources:
     schema: Person
     tables:
       - name: Person
-        description: Contains person information 
+        description: Contains person information
+        freshness:
+          warn_after: {count: 365, period: day}
+          error_after: {count: 8000, period: day}
+        loaded_at_field: ModifiedDate
