@@ -8,6 +8,7 @@ on:
     paths:
       - 'dbt/**'
       - 'airflow/**'
+  workflow_dispatch:
 
 jobs:
   deploy-dev:
