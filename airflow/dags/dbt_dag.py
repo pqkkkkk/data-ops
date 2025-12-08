@@ -4,6 +4,7 @@ from airflow.operators.bash import BashOperator
 # from airflow.operators.python import PythonOperator
 # from airflow.utils.email import send_email
 
+
 def notify_success(context):
     """
     Send success notification
