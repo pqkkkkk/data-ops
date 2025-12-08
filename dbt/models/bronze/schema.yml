@@ -6,14 +6,19 @@ models:
     columns:
       - name: sales_order_id
         description: Primary key for sales orders
-        tests:
+        data_tests:
           - not_null
       - name: order_detail_id
         description: Primary key for sales order details
-        tests:
+        data_tests:
           - not_null
       - name: order_date
         description: Date when the order was placed
+        data_tests:
+          - no_future_dates
+          - valid_date_range:
+              start_date: '2000-01-01'
+              end_date: '2025-12-31'
       - name: due_date
         description: Date when the order is due
       - name: ship_date
@@ -42,7 +47,9 @@ models:
         description: Discount amount
       - name: line_total
         description: Total amount for this line item
-    tests:
+        data_tests:
+          - positive_values
+    data_tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns:
             - sales_order_id
