@@ -40,6 +40,13 @@ jobs:
         with:
           python-version: '3.9'
       
+      - name: Install ODBC Driver for SQL Server
+        run: |
+          curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+          curl https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc-dev
+      
       - name: Install DBT and dependencies
         run: |
           pip install dbt-sqlserver
@@ -47,26 +54,36 @@ jobs:
           dbt deps
       
       - name: DBT Debug
+        env:
+          DBT_SERVER: localhost
         run: |
           cd dbt
           dbt debug --profiles-dir .
       
       - name: Compile DBT models
+        env:
+          DBT_SERVER: localhost
         run: |
           cd dbt
           dbt compile --profiles-dir .
       
       - name: Run DBT models
+        env:
+          DBT_SERVER: localhost
         run: |
           cd dbt
           dbt run --profiles-dir . --target dev
       
       - name: Test DBT models
+        env:
+          DBT_SERVER: localhost
         run: |
           cd dbt
           dbt test --profiles-dir . --target dev
       
       - name: Generate DBT docs
+        env:
+          DBT_SERVER: localhost
         run: |
           cd dbt
           dbt docs generate --profiles-dir .
