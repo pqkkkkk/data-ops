@@ -8,7 +8,7 @@ on:
       - 'dbt/**'
       - 'airflow/**'
   workflow_dispatch:
-
+  
 jobs:
   deploy-prod:
     runs-on: ubuntu-latest

@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.bash import BashOperator
-from airflow.operators.python import PythonOperator
-from airflow.utils.email import send_email
+# from airflow.operators.python import PythonOperator
+# from airflow.utils.email import send_email
+
 
 def notify_success(context):
     """
@@ -19,6 +20,7 @@ def notify_success(context):
     print(body)
     # For actual email, uncomment:
     # send_email(to=['your-email@example.com'], subject=subject, html_content=body)
+
 
 def notify_failure(context):
     """
@@ -37,26 +39,27 @@ def notify_failure(context):
     # For actual email, uncomment:
     # send_email(to=['your-email@example.com'], subject=subject, html_content=body)
 
+
 default_args = {
     'owner': 'data-team',
     'depends_on_past': False,
     'email': ['your-email@example.com'],
-    'email_on_failure': False, # Skip for now
-    'email_on_retry': False, # Skip for now
+    'email_on_failure': False,  # Skip for now
+    'email_on_retry': False,  # Skip for now
     'retries': 2,
     'retry_delay': timedelta(minutes=2),
     'retry_exponential_backoff': True,
     'max_retry_delay': timedelta(minutes=30),
-    #'on_failure_callback': notify_failure,
-    #'on_success_callback': notify_success,
+    # 'on_failure_callback': notify_failure,
+    # 'on_success_callback': notify_success,
 }
 
 dag = DAG(
     'dbt_transform',
     default_args=default_args,
     description='Run dbt models with Bronze, Silver, Gold layers',
-    #schedule_interval='0 2 * * *',  # Run daily at 2 AM
-    schedule_interval=None, # Manual trigger for now
+    # schedule_interval='0 2 * * *',  # Run daily at 2 AM
+    schedule_interval=None,  # Manual trigger for now
     start_date=datetime(2024, 1, 1),
     catchup=False,
     tags=['dbt', 'sqlserver', 'etl'],
