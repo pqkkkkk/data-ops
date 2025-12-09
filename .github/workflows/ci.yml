@@ -51,7 +51,10 @@ jobs:
       - name: Install ODBC driver
         run: |
           sudo apt-get update
-          sudo apt-get install -y odbc-mssql
+          curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+          curl https://packages.microsoft.com/config/ubuntu/24.04/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql17
       
       - name: Wait for SQL Server to be ready
         run: |
@@ -92,7 +95,8 @@ jobs:
       
       - name: Install DBT and dependencies
         run: |
-          pip install dbt-sqlserver
+          pip install --upgrade pip
+          pip install dbt-sqlserver==1.5.11
           cd dbt
           dbt deps
       

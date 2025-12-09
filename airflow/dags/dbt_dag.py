@@ -19,7 +19,11 @@ def notify_success(context):
     print(subject)
     print(body)
     # For actual email, uncomment:
-    # send_email(to=['your-email@example.com'], subject=subject, html_content=body)
+    # send_email(
+    #     to=["your-email@example.com"],
+    #     subject=subject,
+    #     html_content=body
+    # )
 
 
 def notify_failure(context):
@@ -37,7 +41,11 @@ def notify_failure(context):
     print(subject)
     print(body)
     # For actual email, uncomment:
-    # send_email(to=['your-email@example.com'], subject=subject, html_content=body)
+    # send_email(
+    #     to=["your-email@example.com"],
+    #     subject=subject,
+    #     html_content=body
+    # )
 
 
 default_args = {
@@ -68,7 +76,10 @@ dag = DAG(
 # Source freshness check
 dbt_source_freshness = BashOperator(
     task_id="dbt_source_freshness",
-    bash_command="docker exec data-ops-dbt-1 dbt source freshness --profiles-dir .",
+    bash_command=(
+        "docker exec data-ops-dbt-1 "
+        "dbt source freshness --profiles-dir ."
+    ),
     dag=dag,
 )
 
@@ -82,49 +93,70 @@ dbt_deps = BashOperator(
 # Bronze layer
 dbt_run_bronze = BashOperator(
     task_id="dbt_run_bronze",
-    bash_command="docker exec data-ops-dbt-1 dbt run --select tag:bronze --profiles-dir .",
+    bash_command=(
+        "docker exec data-ops-dbt-1 "
+        "dbt run --select tag:bronze --profiles-dir ."
+    ),
     dag=dag,
 )
 
 # Test bronze layer
 dbt_test_bronze = BashOperator(
     task_id="dbt_test_bronze",
-    bash_command="docker exec data-ops-dbt-1 dbt test --select tag:bronze --profiles-dir .",
+    bash_command=(
+        "docker exec data-ops-dbt-1 "
+        "dbt test --select tag:bronze --profiles-dir ."
+    ),
     dag=dag,
 )
 
 # Silver layer
 dbt_run_silver = BashOperator(
     task_id="dbt_run_silver",
-    bash_command="docker exec data-ops-dbt-1 dbt run --select tag:silver --profiles-dir .",
+    bash_command=(
+        "docker exec data-ops-dbt-1 "
+        "dbt run --select tag:silver --profiles-dir ."
+    ),
     dag=dag,
 )
 
 # Test silver layer
 dbt_test_silver = BashOperator(
     task_id="dbt_test_silver",
-    bash_command="docker exec data-ops-dbt-1 dbt test --select tag:silver --profiles-dir .",
+    bash_command=(
+        "docker exec data-ops-dbt-1 "
+        "dbt test --select tag:silver --profiles-dir ."
+    ),
     dag=dag,
 )
 
 # Gold layer
 dbt_run_gold = BashOperator(
     task_id="dbt_run_gold",
-    bash_command="docker exec data-ops-dbt-1 dbt run --select tag:gold --profiles-dir .",
+    bash_command=(
+        "docker exec data-ops-dbt-1 "
+        "dbt run --select tag:gold --profiles-dir ."
+    ),
     dag=dag,
 )
 
 # Test gold layer
 dbt_test_gold = BashOperator(
     task_id="dbt_test_gold",
-    bash_command="docker exec data-ops-dbt-1 dbt test --select tag:gold --profiles-dir .",
+    bash_command=(
+        "docker exec data-ops-dbt-1 "
+        "dbt test --select tag:gold --profiles-dir ."
+    ),
     dag=dag,
 )
 
 # Generate documentation
 dbt_docs_generate = BashOperator(
     task_id="dbt_docs_generate",
-    bash_command="docker exec data-ops-dbt-1 dbt docs generate --profiles-dir .",
+    bash_command=(
+        "docker exec data-ops-dbt-1 "
+        "dbt docs generate --profiles-dir ."
+    ),
     dag=dag,
 )
 
