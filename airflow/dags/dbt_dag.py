@@ -52,14 +52,14 @@ default_args = {
     "owner": "data-team",
     "depends_on_past": False,
     "email": ["your-email@example.com"],
-    "email_on_failure": False,  # Skip for now
-    "email_on_retry": False,  # Skip for now
+    "email_on_failure": False,
+    "email_on_retry": False,
     "retries": 2,
     "retry_delay": timedelta(minutes=2),
     "retry_exponential_backoff": True,
     "max_retry_delay": timedelta(minutes=30),
-    # 'on_failure_callback': notify_failure,
-    # 'on_success_callback': notify_success,
+    # "on_failure_callback": notify_failure,
+    # "on_success_callback": notify_success,
 }
 
 dag = DAG(
