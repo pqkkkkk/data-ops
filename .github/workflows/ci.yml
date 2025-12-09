@@ -36,8 +36,8 @@ jobs:
           --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q 'SELECT 1'"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 10
-          --health-start-period 60s
+          --health-retries 30
+          --health-start-period 180s
     
     steps:
       - name: Checkout code
@@ -59,17 +59,31 @@ jobs:
           echo "PATH=$PATH:/opt/mssql-tools/bin" >> $GITHUB_ENV
           /opt/mssql-tools/bin/sqlcmd -? || true
       
-      - name: Wait for SQL Server to be ready
+      - name: Wait for SQL Server to be ready (longer)
         run: |
-          for i in {1..30}; do
-            sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q "SELECT 1" && echo "SQL Server is ready" && break
-            echo "Waiting for SQL Server... attempt $i"
-            sleep 2
+          # try longer and with exponential backoff to give SQL Server time to initialize
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            attempt=$((i*6))
+            echo "Waiting for SQL Server... attempt $i (sleep $attempt seconds)"
+            sleep $attempt
+            /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q "SELECT 1" && echo "SQL Server is ready" && exit 0
           done
+          echo "SQL Server did not become ready in time"
       
       - name: Create test database
         run: |
           sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q "CREATE DATABASE AdventureWorks2014"
+
+      - name: Dump SQL Server container logs (debug)
+        if: always()
+        run: |
+          echo "=== docker ps (all) ==="
+          docker ps -a --format "{{.ID}} {{.Image}} {{.Names}} {{.Status}}"
+          echo "=== SQL Server container logs (by ancestor image) ==="
+          for id in $(docker ps -aq --filter ancestor=mcr.microsoft.com/mssql/server:2019-latest); do
+            echo "--- logs for container $id ---"
+            docker logs $id || true
+          done
       
       - name: Set up DBT profiles for CI
         run: |
