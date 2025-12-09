@@ -16,6 +16,7 @@ on:
     paths:
       - 'dbt/**'
       - '.github/workflows/**'
+      - 'airflow/**'
   workflow_dispatch: 
 
 jobs:
@@ -45,6 +46,48 @@ jobs:
         with:
           python-version: '3.9'
       
+      - name: Install ODBC driver
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y odbc-mssql
+      
+      - name: Wait for SQL Server to be ready
+        run: |
+          for i in {1..30}; do
+            sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q "SELECT 1" && echo "SQL Server is ready" && break
+            echo "Waiting for SQL Server... attempt $i"
+            sleep 2
+          done
+      
+      - name: Create test database
+        run: |
+          sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q "CREATE DATABASE AdventureWorks2014"
+      
+      - name: Set up DBT profiles for CI
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << EOF
+          dbt_airflow_project:
+            target: ci
+            outputs:
+              ci:
+                type: sqlserver
+                driver: 'ODBC Driver 17 for SQL Server'
+                server: localhost
+                port: 1433
+                database: AdventureWorks2014
+                schema: dbo
+                user: sa
+                password: 'YourStrong@Passw0rd'
+                windows_login: False
+                encrypt: False
+                trust_cert: True
+                threads: 4
+                timeout_seconds: 300
+                retries: 3
+                authentication: sql
+          EOF
+      
       - name: Install DBT and dependencies
         run: |
           pip install dbt-sqlserver
@@ -54,27 +97,27 @@ jobs:
       - name: DBT Debug
         run: |
           cd dbt
-          dbt debug --profiles-dir .
+          dbt debug
       
       - name: Compile DBT models
         run: |
           cd dbt
-          dbt compile --profiles-dir .
+          dbt compile
       
       - name: Run DBT models
         run: |
           cd dbt
-          dbt run --profiles-dir . --target dev
+          dbt run --target ci
       
       - name: Test DBT models
         run: |
           cd dbt
-          dbt test --profiles-dir . --target dev
+          dbt test --target ci
       
       - name: Generate DBT docs
         run: |
           cd dbt
-          dbt docs generate --profiles-dir .
+          dbt docs generate
       
       - name: Upload test results
         if: always()
