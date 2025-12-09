@@ -181,9 +181,15 @@ jobs:
         with:
           python-version: '3.9'
       
-      - name: Install sqlfluff
+      - name: Install sqlfluff and dbt adapter
         run: |
-          pip install sqlfluff sqlfluff-templater-dbt
+          pip install --upgrade pip
+          pip install sqlfluff sqlfluff-templater-dbt dbt-sqlserver==1.5.11
+
+      - name: Install dbt dependencies
+        run: |
+          cd dbt || exit 0
+          dbt deps || true
       
       - name: Lint SQL files
         run: |
