@@ -29,13 +29,15 @@ jobs:
         env:
           ACCEPT_EULA: Y
           SA_PASSWORD: YourStrong@Passw0rd
+          MSSQL_PID: Developer
         ports:
           - 1433:1433
         options: >-
-          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q 'SELECT 1'"
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q 'SELECT 1' -C"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
+          --health-start-period 60s
     
     steps:
       - name: Checkout code
@@ -95,33 +97,43 @@ jobs:
           dbt deps
       
       - name: DBT Debug
+        env:
+          DBT_SERVER: localhost
         run: |
           cd dbt
           dbt debug
       
       - name: Compile DBT models
+        env:
+          DBT_SERVER: localhost
         run: |
           cd dbt
           dbt compile
       
       - name: Run DBT models
+        env:
+          DBT_SERVER: localhost
         run: |
           cd dbt
           dbt run --target ci
       
       - name: Test DBT models
+        env:
+          DBT_SERVER: localhost
         run: |
           cd dbt
           dbt test --target ci
       
       - name: Generate DBT docs
+        env:
+          DBT_SERVER: localhost
         run: |
           cd dbt
           dbt docs generate
       
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dbt-test-results
           path: dbt/target/*.json
