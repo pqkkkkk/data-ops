@@ -126,9 +126,19 @@ jobs:
         run: |
           flake8 airflow/dags/ --max-line-length=120 --exclude=__pycache__
       
-      - name: Check code formatting with black
+      - name: Format code with black
         run: |
-          black --check airflow/dags/
+          black airflow/dags/
+      
+      - name: Check if formatting changed files
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "Code formatting changes detected. Please run 'black airflow/dags/' locally and commit."
+            git diff
+            exit 1
+          else
+            echo "Code is properly formatted!"
+          fi
 
   lint-sql:
     runs-on: ubuntu-latest
@@ -142,9 +152,14 @@ jobs:
         with:
           python-version: '3.9'
       
-      - name: Install sqlfluff
+      - name: Install sqlfluff and dbt
         run: |
-          pip install sqlfluff sqlfluff-templater-dbt
+          pip install sqlfluff sqlfluff-templater-dbt dbt-core dbt-sqlserver
+      
+      - name: Install dbt dependencies
+        run: |
+          cd dbt
+          dbt deps
       
       - name: Lint SQL files
         run: |
