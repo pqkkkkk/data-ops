@@ -9,24 +9,11 @@ on:
     paths:
       - 'dbt/**'
       - '.github/workflows/**'
+  workflow_dispatch:
 
 jobs:
   dbt-test:
     runs-on: ubuntu-latest
-    
-    services:
-      sqlserver:
-        image: mcr.microsoft.com/mssql/server:2019-latest
-        env:
-          ACCEPT_EULA: Y
-          SA_PASSWORD: YourStrong@Passw0rd
-        ports:
-          - 1433:1433
-        options: >-
-          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q 'SELECT 1'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     
     steps:
       - name: Checkout code
@@ -37,6 +24,35 @@ jobs:
         with:
           python-version: '3.9'
       
+      - name: Install ODBC Driver for SQL Server
+        run: |
+          curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+          curl https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev
+
+      - name: Start SQL Server (Custom Image)
+        run: |
+          docker compose up -d --build sqlserver
+          
+          echo "Waiting for SQL Server to be ready..."
+          
+          for i in {1..60}; do
+            if docker exec $(docker compose ps -q sqlserver) /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q "SELECT 1" &> /dev/null; then
+              echo "SQL Server is up!"
+              if docker exec $(docker compose ps -q sqlserver) /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q "SELECT name FROM sys.databases WHERE name = 'AdventureWorks2014'" | grep -q "AdventureWorks2014"; then
+                 echo "AdventureWorks2014 database is ready!"
+                 exit 0
+              fi
+              echo "Database restoring..."
+            else 
+              echo "Waiting for connection..."
+            fi
+            sleep 2
+          done
+          echo "Timeout waiting for SQL Server"
+          exit 1
+      
       - name: Install DBT and dependencies
         run: |
           pip install dbt-sqlserver
@@ -44,36 +60,51 @@ jobs:
           dbt deps
       
       - name: DBT Debug
+        env:
+          DBT_SERVER: localhost
         run: |
           cd dbt
           dbt debug --profiles-dir .
       
       - name: Compile DBT models
+        env:
+          DBT_SERVER: localhost
         run: |
           cd dbt
           dbt compile --profiles-dir .
       
       - name: Run DBT models
+        env:
+          DBT_SERVER: localhost
         run: |
           cd dbt
           dbt run --profiles-dir . --target dev
       
       - name: Test DBT models
+        env:
+          DBT_SERVER: localhost
         run: |
           cd dbt
           dbt test --profiles-dir . --target dev
       
       - name: Generate DBT docs
+        env:
+          DBT_SERVER: localhost
         run: |
           cd dbt
           dbt docs generate --profiles-dir .
       
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dbt-test-results
           path: dbt/target/*.json
+      
+      - name: Cleanup SQL Server
+        if: always()
+        run: |
+          docker compose down -v
 
   lint-python:
     runs-on: ubuntu-latest
