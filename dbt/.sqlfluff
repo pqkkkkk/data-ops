@@ -2,5 +2,9 @@
 dialect = tsql
 templater = dbt
 # Disable all rules that bronze models violate
-exclude_rules = CP02, AL01, LT01, LT02, LT05, LT12, ST03, ST06, RF01, RF04, PRS
+exclude_rules = CP02, AL01, LT01, LT02, LT05, LT12, ST03, ST06, RF01, RF04
 max_line_length = 120
+
+[sqlfluff:templater:dbt]
+# Skip dbt compilation during linting (avoid needing database connection)
+skip_dbt_compilation = True
