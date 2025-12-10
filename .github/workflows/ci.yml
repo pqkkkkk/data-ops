@@ -1,13 +1,6 @@
 name: CI - Test DBT Models
 
 on:
-  push:
-    branches:
-      - '**'
-    paths:
-      - 'dbt/**'
-      - '.github/workflows/**'
-      - 'airflow/**'
   pull_request:
     branches:
       - main
@@ -16,12 +9,10 @@ on:
     paths:
       - 'dbt/**'
       - '.github/workflows/**'
-      - 'airflow/**'
-  workflow_dispatch: 
 
 jobs:
   dbt-test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     
     services:
       sqlserver:
@@ -29,15 +20,13 @@ jobs:
         env:
           ACCEPT_EULA: Y
           SA_PASSWORD: YourStrong@Passw0rd
-          MSSQL_PID: Developer
         ports:
           - 1433:1433
         options: >-
           --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q 'SELECT 1'"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 30
-          --health-start-period 180s
+          --health-retries 5
     
     steps:
       - name: Checkout code
@@ -48,113 +37,40 @@ jobs:
         with:
           python-version: '3.9'
       
-      - name: Install ODBC driver and mssql tools
-        run: |
-          sudo apt-get update
-          curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-          curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
-          sudo apt-get update
-          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc-dev mssql-tools
-          # ensure sqlcmd is on PATH for later steps in the job
-          echo "PATH=$PATH:/opt/mssql-tools/bin" >> $GITHUB_ENV
-          /opt/mssql-tools/bin/sqlcmd -? || true
-      
-      - name: Wait for SQL Server to be ready (longer)
-        run: |
-          # try longer and with exponential backoff to give SQL Server time to initialize
-          for i in 1 2 3 4 5 6 7 8 9 10; do
-            attempt=$((i*6))
-            echo "Waiting for SQL Server... attempt $i (sleep $attempt seconds)"
-            sleep $attempt
-            /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q "SELECT 1" && echo "SQL Server is ready" && exit 0
-          done
-          echo "SQL Server did not become ready in time"
-      
-      - name: Create test database
-        run: |
-          sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q "CREATE DATABASE AdventureWorks2014"
-
-      - name: Dump SQL Server container logs (debug)
-        if: always()
-        run: |
-          echo "=== docker ps (all) ==="
-          docker ps -a --format "{{.ID}} {{.Image}} {{.Names}} {{.Status}}"
-          echo "=== SQL Server container logs (by ancestor image) ==="
-          for id in $(docker ps -aq --filter ancestor=mcr.microsoft.com/mssql/server:2019-latest); do
-            echo "--- logs for container $id ---"
-            docker logs $id || true
-          done
-      
-      - name: Set up DBT profiles for CI
-        run: |
-          mkdir -p ~/.dbt
-          cat > ~/.dbt/profiles.yml << EOF
-          dbt_airflow_project:
-            target: ci
-            outputs:
-              ci:
-                type: sqlserver
-                driver: 'ODBC Driver 17 for SQL Server'
-                server: localhost
-                port: 1433
-                database: AdventureWorks2014
-                schema: dbo
-                user: sa
-                password: 'YourStrong@Passw0rd'
-                windows_login: False
-                encrypt: False
-                trust_cert: True
-                threads: 4
-                timeout_seconds: 300
-                retries: 3
-                authentication: sql
-          EOF
-      
       - name: Install DBT and dependencies
         run: |
-          pip install --upgrade pip
-          pip install dbt-sqlserver==1.5.11
+          pip install dbt-sqlserver
           cd dbt
           dbt deps
       
       - name: DBT Debug
-        env:
-          DBT_SERVER: localhost
         run: |
           cd dbt
-          dbt debug
+          dbt debug --profiles-dir .
       
       - name: Compile DBT models
-        env:
-          DBT_SERVER: localhost
         run: |
           cd dbt
-          dbt compile
+          dbt compile --profiles-dir .
       
       - name: Run DBT models
-        env:
-          DBT_SERVER: localhost
         run: |
           cd dbt
-          dbt run --target ci
+          dbt run --profiles-dir . --target dev
       
       - name: Test DBT models
-        env:
-          DBT_SERVER: localhost
         run: |
           cd dbt
-          dbt test --target ci
+          dbt test --profiles-dir . --target dev
       
       - name: Generate DBT docs
-        env:
-          DBT_SERVER: localhost
         run: |
           cd dbt
-          dbt docs generate
+          dbt docs generate --profiles-dir .
       
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: dbt-test-results
           path: dbt/target/*.json
@@ -195,15 +111,9 @@ jobs:
         with:
           python-version: '3.9'
       
-      - name: Install sqlfluff and dbt adapter
+      - name: Install sqlfluff
         run: |
-          pip install --upgrade pip
-          pip install sqlfluff sqlfluff-templater-dbt dbt-sqlserver==1.5.11
-
-      - name: Install dbt dependencies
-        run: |
-          cd dbt || exit 0
-          dbt deps || true
+          pip install sqlfluff sqlfluff-templater-dbt
       
       - name: Lint SQL files
         run: |

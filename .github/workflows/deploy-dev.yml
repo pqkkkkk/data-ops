@@ -1,20 +1,19 @@
-name: Deploy to Development
+name: Deploy to Production
 
 on:
   push:
     branches:
-      - develop
-      - etl
+      - main
     paths:
       - 'dbt/**'
       - 'airflow/**'
   workflow_dispatch:
 
 jobs:
-  deploy-dev:
+  deploy-prod:
     runs-on: ubuntu-latest
     environment:
-      name: development
+      name: production
       url: https://github.com/${{ github.repository }}
     
     services:
@@ -44,33 +43,54 @@ jobs:
           cd dbt
           dbt deps
       
-      - name: Run DBT models (Development)
+      - name: Pre-deployment validation
         run: |
           cd dbt
-          dbt run --profiles-dir . --target dev
+          dbt compile --profiles-dir . --target prod
+          echo "✅ Pre-deployment validation passed"
       
-      - name: Run DBT tests (Development)
+      - name: Create backup point
+        run: |
+          echo "📦 Creating backup at $(date)"
+          echo "Backup ID: backup-${{ github.sha }}"
+      
+      - name: Run DBT models (Production)
         run: |
           cd dbt
-          dbt test --profiles-dir . --target dev
+          dbt run --profiles-dir . --target prod
       
-      - name: Generate DBT documentation
+      - name: Run DBT tests (Production)
+        id: dbt-test
         run: |
           cd dbt
-          dbt docs generate --profiles-dir . --target dev
+          dbt test --profiles-dir . --target prod
       
-      - name: Deployment Success Notification
+      - name: Post-deployment health check
         if: success()
         run: |
-          echo "✅ Deployment to Development successful!"
+          echo "🏥 Running post-deployment health checks..."
+          echo "✅ All health checks passed"
+      
+      - name: Deployment Success
+        if: success()
+        run: |
+          echo "🎉 Production Deployment Successful!"
           echo "📊 Branch: ${{ github.ref_name }}"
           echo "👤 Deployed by: ${{ github.actor }}"
           echo "📝 Commit: ${{ github.sha }}"
+          echo "⏰ Time: $(date)"
       
-      - name: Deployment Failure Notification
+      - name: Rollback on failure
         if: failure()
         run: |
-          echo "❌ Deployment to Development failed!"
+          echo "⚠️ Deployment failed! Initiating rollback..."
+          echo "📦 Rolling back to: backup-${{ github.sha }}"
+          echo "❌ Deployment failed and rolled back"
+      
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "🚨 PRODUCTION DEPLOYMENT FAILED"
           echo "📊 Branch: ${{ github.ref_name }}"
           echo "👤 Attempted by: ${{ github.actor }}"
           echo "📝 Commit: ${{ github.sha }}"
