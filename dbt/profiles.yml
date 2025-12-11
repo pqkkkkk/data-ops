@@ -20,3 +20,22 @@ dbt_airflow_project:
       keepalives_idle: 0  # Disable keepalive to prevent connection issues
       application_name: dbt_airflow_project  # Identify the application in SQL Server
       retry_on_error: True  # Enable automatic retries on transient errors 
+    prod:
+      type: sqlserver
+      driver: 'ODBC Driver 18 for SQL Server'
+      server: "{{ env_var('DBT_SERVER', 'localhost') }}"
+      port: 1433
+      database: AdventureWorks2014
+      schema: dbo
+      user: sa
+      password: 'YourStrong@Passw0rd'
+      windows_login: False
+      encrypt: False
+      trust_cert: True
+      threads: 4  # Number of concurrent operations
+      timeout_seconds: 300  # Query timeout in seconds
+      retries: 3  # Number of retries for failed operations
+      authentication: sql  # Explicitly specify SQL authentication
+      keepalives_idle: 0  # Disable keepalive to prevent connection issues
+      application_name: dbt_airflow_project  # Identify the application in SQL Server
+      retry_on_error: True  # Enable automatic retries on transient errors 
