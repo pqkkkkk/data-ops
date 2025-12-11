@@ -16,15 +16,6 @@ jobs:
       name: production
       url: https://github.com/${{ github.repository }}
     
-    services:
-      sqlserver:
-        image: mcr.microsoft.com/mssql/server:2019-latest
-        env:
-          ACCEPT_EULA: Y
-          SA_PASSWORD: YourStrong@Passw0rd
-        ports:
-          - 1433:1433
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -33,7 +24,31 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-      
+
+      - name: Install ODBC Driver for SQL Server
+        run: |
+          curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+          curl https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev
+
+      - name: Start SQL Server (Simulate Production Environment)
+        run: |
+          docker compose up -d --build sqlserver
+          
+          echo "Waiting for SQL Server to be ready..."
+          sleep 30 # Đợi khởi động cơ bản
+          
+          for i in {1..60}; do
+            if docker exec $(docker compose ps -q sqlserver) /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q "SELECT name FROM sys.databases WHERE name = 'AdventureWorks2014'" | grep -q "AdventureWorks2014"; then
+                 echo "Development Database is ready!"
+                 exit 0
+            fi
+            echo "Waiting for database restore..."
+            sleep 2
+          done
+          exit 1
+
       - name: Install DBT
         run: |
           pip install dbt-sqlserver
@@ -44,6 +59,8 @@ jobs:
           dbt deps
       
       - name: Pre-deployment validation
+        env:
+          DBT_SERVER: localhost
         run: |
           cd dbt
           dbt compile --profiles-dir . --target prod
@@ -55,12 +72,16 @@ jobs:
           echo "Backup ID: backup-${{ github.sha }}"
       
       - name: Run DBT models (Production)
+        env:
+          DBT_SERVER: localhost
         run: |
           cd dbt
           dbt run --profiles-dir . --target prod
       
       - name: Run DBT tests (Production)
         id: dbt-test
+        env:
+          DBT_SERVER: localhost
         run: |
           cd dbt
           dbt test --profiles-dir . --target prod
