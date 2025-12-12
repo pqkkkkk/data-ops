@@ -62,6 +62,7 @@ jobs:
       - name: DBT Debug
         env:
           DBT_SERVER: localhost
+          DBT_SQL_DRIVER: ODBC Driver 18 for SQL Server
         run: |
           cd dbt
           dbt debug --profiles-dir .
@@ -69,6 +70,7 @@ jobs:
       - name: Compile DBT models
         env:
           DBT_SERVER: localhost
+          DBT_SQL_DRIVER: ODBC Driver 18 for SQL Server
         run: |
           cd dbt
           dbt compile --profiles-dir .
@@ -76,6 +78,7 @@ jobs:
       - name: Run DBT models
         env:
           DBT_SERVER: localhost
+          DBT_SQL_DRIVER: ODBC Driver 18 for SQL Server
         run: |
           cd dbt
           dbt run --profiles-dir . --target dev
@@ -83,6 +86,7 @@ jobs:
       - name: Test DBT models
         env:
           DBT_SERVER: localhost
+          DBT_SQL_DRIVER: ODBC Driver 18 for SQL Server
         run: |
           cd dbt
           dbt test --profiles-dir . --target dev
@@ -90,6 +94,7 @@ jobs:
       - name: Generate DBT docs
         env:
           DBT_SERVER: localhost
+          DBT_SQL_DRIVER: ODBC Driver 18 for SQL Server
         run: |
           cd dbt
           dbt docs generate --profiles-dir .
